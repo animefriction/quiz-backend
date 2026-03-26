@@ -3,6 +3,11 @@ package com.quiztournament.backend.controller;
 import com.quiztournament.backend.dto.QuizTournamentCreateRequest;
 import com.quiztournament.backend.dto.QuizTournamentResponse;
 import com.quiztournament.backend.dto.QuizTournamentUpdateRequest;
+import com.quiztournament.backend.dto.TournamentAnalyticsResponse;
+import com.quiztournament.backend.dto.UserResponse;
+import com.quiztournament.backend.entity.Role;
+import com.quiztournament.backend.entity.User;
+import com.quiztournament.backend.repository.UserRepository;
 import com.quiztournament.backend.service.AdminQuizTournamentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -21,39 +26,77 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/admin/tournaments")
+@RequestMapping("/api/admin")
 @RequiredArgsConstructor
 public class AdminQuizTournamentController {
 
     private final AdminQuizTournamentService adminQuizTournamentService;
+    private final UserRepository userRepository;
 
-    @GetMapping
+    // ---- Tournament CRUD ----
+
+    @GetMapping("/tournaments")
     public List<QuizTournamentResponse> getAllTournaments() {
         return adminQuizTournamentService.getAllTournaments();
     }
 
-    @GetMapping("/{tournamentId}")
+    @GetMapping("/tournaments/{tournamentId}")
     public QuizTournamentResponse getTournamentById(@PathVariable Long tournamentId) {
         return adminQuizTournamentService.getTournamentById(tournamentId);
     }
 
-    @PostMapping
+    @PostMapping("/tournaments")
     @ResponseStatus(HttpStatus.CREATED)
     public QuizTournamentResponse createTournament(
             @Valid @RequestBody QuizTournamentCreateRequest request) {
         return adminQuizTournamentService.createTournament(request);
     }
 
-    @PutMapping("/{tournamentId}")
+    @PutMapping("/tournaments/{tournamentId}")
     public QuizTournamentResponse updateTournament(
             @PathVariable Long tournamentId,
             @Valid @RequestBody QuizTournamentUpdateRequest request) {
         return adminQuizTournamentService.updateTournament(tournamentId, request);
     }
 
-    @DeleteMapping("/{tournamentId}")
+    @DeleteMapping("/tournaments/{tournamentId}")
     public Map<String, String> deleteTournament(@PathVariable Long tournamentId) {
         adminQuizTournamentService.deleteTournament(tournamentId);
         return Map.of("message", "Quiz tournament deleted successfully");
+    }
+
+    // ---- Additional admin feature #1: Tournament analytics ----
+
+    @GetMapping("/tournaments/{tournamentId}/analytics")
+    public TournamentAnalyticsResponse getTournamentAnalytics(@PathVariable Long tournamentId) {
+        return adminQuizTournamentService.getTournamentAnalytics(tournamentId);
+    }
+
+    // ---- View tournament likes (assignment requirement) ----
+
+    @GetMapping("/tournaments/{tournamentId}/likes")
+    public Map<String, Object> getTournamentLikes(@PathVariable Long tournamentId) {
+        int count = adminQuizTournamentService.getTournamentLikeCount(tournamentId);
+        return Map.of("tournamentId", tournamentId, "totalLikes", count);
+    }
+
+    // ---- Additional admin feature #2: View all players ----
+
+    @GetMapping("/users")
+    public List<UserResponse> getAllPlayers() {
+        return userRepository.findByRole(Role.PLAYER).stream()
+                .map(this::mapToUserResponse)
+                .toList();
+    }
+
+    private UserResponse mapToUserResponse(User user) {
+        return UserResponse.builder()
+                .id(user.getId())
+                .username(user.getUsername())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .email(user.getEmail())
+                .role(user.getRole().name())
+                .build();
     }
 }
