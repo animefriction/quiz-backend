@@ -4,10 +4,13 @@ import com.quiztournament.backend.dto.QuestionResponse;
 import com.quiztournament.backend.dto.QuizTournamentCreateRequest;
 import com.quiztournament.backend.dto.QuizTournamentResponse;
 import com.quiztournament.backend.dto.QuizTournamentUpdateRequest;
+import com.quiztournament.backend.dto.TournamentAnalyticsResponse;
 import com.quiztournament.backend.entity.Question;
+import com.quiztournament.backend.entity.QuizAttempt;
 import com.quiztournament.backend.entity.QuizTournament;
 import com.quiztournament.backend.entity.User;
 import com.quiztournament.backend.exception.ResourceNotFoundException;
+import com.quiztournament.backend.repository.QuizAttemptRepository;
 import com.quiztournament.backend.repository.QuizLikeRepository;
 import com.quiztournament.backend.repository.QuizTournamentRepository;
 import com.quiztournament.backend.repository.UserRepository;
@@ -27,7 +30,9 @@ public class AdminQuizTournamentService {
     private final OpenTdbService openTdbService;
     private final QuizTournamentRepository quizTournamentRepository;
     private final QuizLikeRepository quizLikeRepository;
+    private final QuizAttemptRepository quizAttemptRepository;
     private final UserRepository userRepository;
+    private final EmailService emailService;
 
     public List<QuizTournamentResponse> getAllTournaments() {
         return quizTournamentRepository.findAllByOrderByCreatedAtDesc()
@@ -91,7 +96,12 @@ public class AdminQuizTournamentService {
 
         tournament.setQuestions(questions);
 
-        return mapToResponse(quizTournamentRepository.save(tournament));
+        QuizTournament saved = quizTournamentRepository.save(tournament);
+
+        // Notify all player users about the new tournament (excludes admins)
+        emailService.sendTournamentCreatedNotification(saved);
+
+        return mapToResponse(saved);
     }
 
     public QuizTournamentResponse updateTournament(Long tournamentId, QuizTournamentUpdateRequest request) {
@@ -111,6 +121,50 @@ public class AdminQuizTournamentService {
     public void deleteTournament(Long tournamentId) {
         QuizTournament tournament = findTournament(tournamentId);
         quizTournamentRepository.delete(tournament);
+    }
+
+    /**
+     * Additional admin feature #1: Tournament analytics — total attempts,
+     * average score, highest/lowest score, pass rate, total likes.
+     */
+    public TournamentAnalyticsResponse getTournamentAnalytics(Long tournamentId) {
+        QuizTournament tournament = findTournament(tournamentId);
+
+        List<QuizAttempt> attempts = quizAttemptRepository
+                .findByQuizTournamentIdOrderByScoreDesc(tournamentId);
+
+        int totalAttempts = attempts.size();
+        double avgScore = attempts.stream().mapToInt(QuizAttempt::getScore).average().orElse(0.0);
+        int highest = attempts.stream().mapToInt(QuizAttempt::getScore).max().orElse(0);
+        int lowest = attempts.stream().mapToInt(QuizAttempt::getScore).min().orElse(0);
+
+        long passCount = attempts.stream()
+                .filter(a -> ((double) a.getScore() / tournament.getTotalQuestions()) * 100
+                        >= tournament.getMinPassingScore())
+                .count();
+
+        double passRate = totalAttempts > 0 ? (passCount * 100.0 / totalAttempts) : 0.0;
+        int totalLikes = (int) quizLikeRepository.countByQuizTournamentId(tournamentId);
+
+        return TournamentAnalyticsResponse.builder()
+                .tournamentId(tournament.getId())
+                .tournamentName(tournament.getName())
+                .totalAttempts(totalAttempts)
+                .totalQuestions(tournament.getTotalQuestions())
+                .averageScore(Math.round(avgScore * 100.0) / 100.0)
+                .highestScore(highest)
+                .lowestScore(lowest)
+                .passRate(Math.round(passRate * 100.0) / 100.0)
+                .totalLikes(totalLikes)
+                .build();
+    }
+
+    /**
+     * Returns the number of likes and the count for a specific tournament.
+     */
+    public int getTournamentLikeCount(Long tournamentId) {
+        findTournament(tournamentId);
+        return (int) quizLikeRepository.countByQuizTournamentId(tournamentId);
     }
 
     // ---- Helpers ----
@@ -149,6 +203,7 @@ public class AdminQuizTournamentService {
                 .type(question.getType())
                 .questionText(question.getQuestionText())
                 .options(question.getAllOptions())
+                .correctAnswer(question.getCorrectAnswer())
                 .points(question.getPoints())
                 .build();
     }
