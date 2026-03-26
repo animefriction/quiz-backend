@@ -34,6 +34,7 @@ public class AdminQuizTournamentService {
     private final UserRepository userRepository;
     private final EmailService emailService;
 
+    @Transactional(readOnly = true)
     public List<QuizTournamentResponse> getAllTournaments() {
         return quizTournamentRepository.findAllByOrderByCreatedAtDesc()
                 .stream()
@@ -41,6 +42,7 @@ public class AdminQuizTournamentService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
     public QuizTournamentResponse getTournamentById(Long tournamentId) {
         return mapToResponse(findTournament(tournamentId));
     }
@@ -104,6 +106,7 @@ public class AdminQuizTournamentService {
         return mapToResponse(saved);
     }
 
+    @Transactional
     public QuizTournamentResponse updateTournament(Long tournamentId, QuizTournamentUpdateRequest request) {
         QuizTournament tournament = findTournament(tournamentId);
 
@@ -118,6 +121,7 @@ public class AdminQuizTournamentService {
         return mapToResponse(quizTournamentRepository.save(tournament));
     }
 
+    @Transactional
     public void deleteTournament(Long tournamentId) {
         QuizTournament tournament = findTournament(tournamentId);
         quizTournamentRepository.delete(tournament);
@@ -127,6 +131,7 @@ public class AdminQuizTournamentService {
      * Additional admin feature #1: Tournament analytics — total attempts,
      * average score, highest/lowest score, pass rate, total likes.
      */
+    @Transactional(readOnly = true)
     public TournamentAnalyticsResponse getTournamentAnalytics(Long tournamentId) {
         QuizTournament tournament = findTournament(tournamentId);
 
