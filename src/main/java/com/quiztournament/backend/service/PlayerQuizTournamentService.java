@@ -2,6 +2,7 @@ package com.quiztournament.backend.service;
 
 import com.quiztournament.backend.dto.QuestionResponse;
 import com.quiztournament.backend.dto.QuizTournamentResponse;
+import com.quiztournament.backend.dto.ScoreResponse;
 import com.quiztournament.backend.entity.Question;
 import com.quiztournament.backend.entity.QuizTournament;
 import com.quiztournament.backend.exception.ResourceNotFoundException;
@@ -56,6 +57,48 @@ public class PlayerQuizTournamentService {
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Quiz tournament not found with id: " + tournamentId));
         return mapToResponse(tournament);
+    }
+
+    /**
+     * Additional player feature #1: Search/filter tournaments by category
+     * and/or difficulty.
+     */
+    public List<QuizTournamentResponse> searchTournaments(String category, String difficulty) {
+        return quizTournamentRepository.findAllByOrderByCreatedAtDesc()
+                .stream()
+                .filter(t -> {
+                    boolean matchesCategory = category == null || category.isBlank()
+                            || t.getCategory().equalsIgnoreCase(category);
+                    boolean matchesDifficulty = difficulty == null || difficulty.isBlank()
+                            || t.getDifficulty().equalsIgnoreCase(difficulty);
+                    return matchesCategory && matchesDifficulty;
+                })
+                .map(this::mapToResponse)
+                .toList();
+    }
+
+    /**
+     * Additional player feature #2: Player's personal quiz history
+     * showing all attempts with scores and dates.
+     */
+    public List<ScoreResponse> getPlayerHistory(Long userId) {
+        return quizAttemptRepository.findByUserId(userId)
+                .stream()
+                .map(attempt -> {
+                    QuizTournament t = attempt.getQuizTournament();
+                    boolean passed = ((double) attempt.getScore() / t.getTotalQuestions()) * 100
+                            >= t.getMinPassingScore();
+                    return ScoreResponse.builder()
+                            .userId(attempt.getUser().getId())
+                            .playerName(attempt.getUser().getFirstName() + " " + attempt.getUser().getLastName())
+                            .quizTournamentId(t.getId())
+                            .score(attempt.getScore())
+                            .totalQuestions(t.getTotalQuestions())
+                            .passed(passed)
+                            .completedDate(attempt.getCompletedAt())
+                            .build();
+                })
+                .toList();
     }
 
     // ---- Helpers ----

@@ -90,4 +90,20 @@ public class PlayerQuizController {
         int totalLikes = quizLikeService.unlikeTournament(userId, tournamentId);
         return Map.of("message", "Tournament unliked successfully", "totalLikes", totalLikes);
     }
+
+    // ---- Additional player feature #1: Search/filter tournaments ----
+
+    @GetMapping("/search")
+    public List<QuizTournamentResponse> searchTournaments(
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String difficulty) {
+        return playerQuizTournamentService.searchTournaments(category, difficulty);
+    }
+
+    // ---- Additional player feature #2: Player quiz history ----
+
+    @GetMapping("/history/{userId}")
+    public List<ScoreResponse> getPlayerHistory(@PathVariable Long userId) {
+        return playerQuizTournamentService.getPlayerHistory(userId);
+    }
 }
