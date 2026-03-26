@@ -1,5 +1,6 @@
 package com.quiztournament.backend.service;
 
+import com.quiztournament.backend.dto.QuestionFeedback;
 import com.quiztournament.backend.dto.QuizSubmissionRequest;
 import com.quiztournament.backend.dto.ScoreResponse;
 import com.quiztournament.backend.entity.Question;
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -52,19 +54,31 @@ public class QuizParticipationService {
             throw new IllegalArgumentException("You have already completed this tournament");
         }
 
-        // Calculate score server-side
+        // Calculate score server-side and build per-question feedback
         Map<Long, String> answers = request.getAnswers();
         int score = 0;
         int totalAnswered = 0;
+        List<QuestionFeedback> feedback = new ArrayList<>();
 
         for (Question question : tournament.getQuestions()) {
             String playerAnswer = answers.get(question.getId());
+            boolean isCorrect = false;
+
             if (playerAnswer != null) {
                 totalAnswered++;
-                if (question.getCorrectAnswer().equalsIgnoreCase(playerAnswer.trim())) {
+                isCorrect = question.getCorrectAnswer().equalsIgnoreCase(playerAnswer.trim());
+                if (isCorrect) {
                     score += question.getPoints();
                 }
             }
+
+            feedback.add(QuestionFeedback.builder()
+                    .questionId(question.getId())
+                    .questionText(question.getQuestionText())
+                    .playerAnswer(playerAnswer)
+                    .correctAnswer(question.getCorrectAnswer())
+                    .isCorrect(isCorrect)
+                    .build());
         }
 
         QuizAttempt attempt = QuizAttempt.builder()
@@ -89,6 +103,7 @@ public class QuizParticipationService {
                 .totalQuestions(tournament.getTotalQuestions())
                 .passed(passed)
                 .completedDate(attempt.getCompletedAt())
+                .feedback(feedback)
                 .build();
     }
 

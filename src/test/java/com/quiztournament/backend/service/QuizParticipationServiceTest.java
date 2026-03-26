@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -124,6 +125,11 @@ class QuizParticipationServiceTest {
         assertEquals(2, result.getScore());
         assertEquals(2, result.getTotalQuestions());
         assertTrue(result.getPassed()); // 100% >= 60%
+        assertNotNull(result.getFeedback());
+        assertEquals(2, result.getFeedback().size());
+        assertTrue(result.getFeedback().get(0).getIsCorrect());
+        assertTrue(result.getFeedback().get(1).getIsCorrect());
+        assertEquals("Water", result.getFeedback().get(0).getCorrectAnswer());
         verify(quizAttemptRepository).save(any(QuizAttempt.class));
     }
 
@@ -142,6 +148,9 @@ class QuizParticipationServiceTest {
 
         assertEquals(1, result.getScore());
         assertEquals(2, result.getTotalQuestions());
+        assertNotNull(result.getFeedback());
+        assertFalse(result.getFeedback().get(0).getIsCorrect()); // Oxygen != Water
+        assertTrue(result.getFeedback().get(1).getIsCorrect());  // True == True
     }
 
     @Test

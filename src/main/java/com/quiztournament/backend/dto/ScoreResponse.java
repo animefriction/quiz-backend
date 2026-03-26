@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 @Setter
@@ -27,4 +28,7 @@ public class ScoreResponse {
     private Integer totalPlayers;
     private Double averageScore;
     private Integer numberOfLikes;
+
+    // Per-question feedback (populated only on submission response)
+    private List<QuestionFeedback> feedback;
 }
