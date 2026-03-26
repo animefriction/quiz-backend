@@ -7,6 +7,7 @@ A Spring Boot REST API for a pub quiz tournament application. Players can sign u
 - **Java 17** + **Spring Boot 3.4**
 - **Spring Data JPA** (Hibernate)
 - **MySQL** (production) / **H2** (dev)
+- **Spring Mail** — password reset & tournament notifications
 - **Lombok** — boilerplate reduction
 - **Maven** — dependency management
 - **OpenTDB API** — dynamic quiz questions
@@ -78,6 +79,8 @@ The project follows a clean **Controller → Service → Repository** layered ar
 | POST   | `/api/auth/register/player`   | Register a player user  |
 | POST   | `/api/auth/login`             | Login                   |
 | POST   | `/api/auth/logout/{userId}`   | Logout                  |
+| POST   | `/api/auth/forgot-password`   | Request password reset  |
+| POST   | `/api/auth/reset-password`    | Reset password with token |
 
 ### User Profile
 
@@ -88,13 +91,16 @@ The project follows a clean **Controller → Service → Repository** layered ar
 
 ### Admin — Tournament Management
 
-| Method | Endpoint                          | Description          |
-|--------|-----------------------------------|----------------------|
-| GET    | `/api/admin/tournaments`          | List all tournaments |
-| GET    | `/api/admin/tournaments/{id}`     | Get tournament       |
-| POST   | `/api/admin/tournaments`          | Create tournament    |
-| PUT    | `/api/admin/tournaments/{id}`     | Update tournament    |
-| DELETE | `/api/admin/tournaments/{id}`     | Delete tournament    |
+| Method | Endpoint                                      | Description              |
+|--------|-----------------------------------------------|--------------------------|
+| GET    | `/api/admin/tournaments`                      | List all tournaments     |
+| GET    | `/api/admin/tournaments/{id}`                 | Get tournament details   |
+| POST   | `/api/admin/tournaments`                      | Create tournament        |
+| PUT    | `/api/admin/tournaments/{id}`                 | Update tournament        |
+| DELETE | `/api/admin/tournaments/{id}`                 | Delete tournament        |
+| GET    | `/api/admin/tournaments/{id}/analytics`       | Tournament analytics     |
+| GET    | `/api/admin/tournaments/{id}/likes`           | View like count          |
+| GET    | `/api/admin/users`                            | View all player users    |
 
 ### Player — Tournaments & Quizzes
 
@@ -103,12 +109,14 @@ The project follows a clean **Controller → Service → Repository** layered ar
 | GET    | `/api/player/tournaments/ongoing`                | Ongoing tournaments      |
 | GET    | `/api/player/tournaments/upcoming`               | Upcoming tournaments     |
 | GET    | `/api/player/tournaments/past`                   | Past tournaments         |
-| GET    | `/api/player/tournaments/participated?userId=X`  | Player's history         |
+| GET    | `/api/player/tournaments/participated?userId=X`  | Player's participated    |
+| GET    | `/api/player/tournaments/search?category=X&difficulty=Y` | Search/filter    |
 | GET    | `/api/player/tournaments/{id}`                   | Tournament detail        |
 | POST   | `/api/player/tournaments/{id}/submit`            | Submit quiz answers      |
 | GET    | `/api/player/tournaments/{id}/scores`            | Leaderboard              |
 | POST   | `/api/player/tournaments/{id}/like/{userId}`     | Like tournament          |
 | POST   | `/api/player/tournaments/{id}/unlike/{userId}`   | Unlike tournament        |
+| GET    | `/api/player/tournaments/history/{userId}`       | Player quiz history      |
 
 ## Key Design Decisions
 
@@ -117,3 +125,5 @@ The project follows a clean **Controller → Service → Repository** layered ar
 - **Server-side answer validation** — the player submits `{questionId: answer}` and the backend calculates the score.
 - **BCrypt password hashing** — passwords are never stored in plain text.
 - **Duplicate participation prevention** — a unique constraint on `(user_id, quiz_tournament_id)` in the attempts table.
+- **Email notifications** — players are notified when new tournaments are created; password reset uses token-based email flow.
+- **Admin sees correct answers** — the admin question response includes correctAnswer for review; player responses exclude it until after submission.
