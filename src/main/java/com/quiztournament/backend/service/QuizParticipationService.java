@@ -23,6 +23,7 @@ import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class QuizParticipationService {
 
     private final QuizAttemptRepository quizAttemptRepository;

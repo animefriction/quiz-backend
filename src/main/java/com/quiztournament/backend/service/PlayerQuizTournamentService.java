@@ -70,7 +70,8 @@ public class PlayerQuizTournamentService {
                 .stream()
                 .filter(t -> {
                     boolean matchesCategory = category == null || category.isBlank()
-                            || t.getCategory().equalsIgnoreCase(category);
+                            || t.getCategory().toLowerCase().contains(category.toLowerCase())
+                            || category.toLowerCase().contains(t.getCategory().toLowerCase());
                     boolean matchesDifficulty = difficulty == null || difficulty.isBlank()
                             || t.getDifficulty().equalsIgnoreCase(difficulty);
                     return matchesCategory && matchesDifficulty;
