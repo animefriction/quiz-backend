@@ -70,14 +70,21 @@ public class PlayerQuizTournamentService {
                 .stream()
                 .filter(t -> {
                     boolean matchesCategory = category == null || category.isBlank()
-                            || t.getCategory().toLowerCase().contains(category.toLowerCase())
-                            || category.toLowerCase().contains(t.getCategory().toLowerCase());
+                            || normalizeCategory(t.getCategory()).equals(normalizeCategory(category));
                     boolean matchesDifficulty = difficulty == null || difficulty.isBlank()
                             || t.getDifficulty().equalsIgnoreCase(difficulty);
                     return matchesCategory && matchesDifficulty;
                 })
                 .map(this::mapToResponse)
                 .toList();
+    }
+
+    /**
+     * Normalize category strings so "Science & Nature" and
+     * "Science and Nature" are treated as equal.
+     */
+    private String normalizeCategory(String cat) {
+        return cat.toLowerCase().replace("&", "and").replaceAll("\\s+", " ").trim();
     }
 
     /**
