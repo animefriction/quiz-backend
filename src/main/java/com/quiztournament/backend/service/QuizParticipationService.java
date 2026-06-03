@@ -30,6 +30,7 @@ public class QuizParticipationService {
     private final QuizTournamentRepository quizTournamentRepository;
     private final QuizLikeRepository quizLikeRepository;
     private final UserRepository userRepository;
+    private final ExplanationService explanationService; // GenAI: wrong-answer explanations
 
     /**
      * Submits a quiz attempt. Answers are validated server-side
@@ -73,13 +74,27 @@ public class QuizParticipationService {
                 }
             }
 
-            feedback.add(QuestionFeedback.builder()
+            QuestionFeedback fb = QuestionFeedback.builder()
                     .questionId(question.getId())
                     .questionText(question.getQuestionText())
                     .playerAnswer(playerAnswer)
                     .correctAnswer(question.getCorrectAnswer())
                     .isCorrect(isCorrect)
-                    .build());
+                    .build();
+
+            // GenAI: generate an explanation for incorrect answers only.
+            // If generation is unavailable, explanation stays null and scoring is unaffected.
+            if (!isCorrect) {
+                String explanation = explanationService.generateExplanation(
+                        question.getQuestionText(),
+                        question.getAllOptions(),
+                        question.getCorrectAnswer(),
+                        playerAnswer,
+                        tournament.getCategory());
+                fb.setExplanation(explanation);
+            }
+
+            feedback.add(fb);
         }
 
         QuizAttempt attempt = QuizAttempt.builder()

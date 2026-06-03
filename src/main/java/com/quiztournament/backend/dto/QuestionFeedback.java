@@ -18,4 +18,8 @@ public class QuestionFeedback {
     private String playerAnswer;
     private String correctAnswer;
     private Boolean isCorrect;
+
+    // GenAI: learner-friendly explanation, populated for incorrect answers only.
+    // Null when the answer was correct or when explanation generation is unavailable.
+    private String explanation;
 }
